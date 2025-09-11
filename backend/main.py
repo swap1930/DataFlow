@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from chat import answer_question
 
 from process import process_excel_file
-from config import FRONTEND_ORIGIN
+from config import FRONTEND_ORIGINS
 from db import insert_processed_file  # MongoDB integration
 
 UPLOAD_DIR = "uploads"
@@ -64,9 +64,10 @@ except ValueError:
 app = FastAPI(title="DataFlow Analytics API", version="1.0.0")
 
 # CORS
+allowed = [origin.strip() for origin in FRONTEND_ORIGINS.split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=allowed,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
