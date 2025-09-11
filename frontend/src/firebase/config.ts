@@ -3,9 +3,7 @@
 
 export const firebaseConfig = {
   apiKey: "AIzaSyAZH9RshMe4XVXiTXZWtoOFQQm9tBzXLFs",
-  authDomain: window.location.hostname.includes("netlify.app")
-    ? "excelprocess.netlify.app"
-    : "dataflow-bc2c8.firebaseapp.com",
+  authDomain: "dataflow-bc2c8.firebaseapp.com",
   projectId: "dataflow-bc2c8",
   storageBucket: "dataflow-bc2c8.appspot.com",
     messagingSenderId: "1234567890",
