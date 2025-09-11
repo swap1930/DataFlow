@@ -1,12 +1,9 @@
-# Multiple frontend origins
-FRONTEND_ORIGINS = [
-    "http://localhost:5173",
-    "https://excelprocess.netlify.app",
-    "https://yourapp.onrender.com"
-]
+import os
+
+# Frontend origin for CORS
+FRONTEND_ORIGINS = os.getenv("FRONTEND_ORIGINS") or os.getenv("FRONTEND_ORIGIN") or os.getenv("RENDER_FRONTEND") or "http://localhost:5173"
 
 # Mongo connection
-
-MONGO_URI = "mongodb+srv://swap1930:swap1234@1930fastapi.sfuo7ue.mongodb.net/"
+MONGO_URI = os.getenv("MONGO_URI", os.getenv("RENDER_MONGO_URI", "mongodb://localhost:27017"))
 
 
