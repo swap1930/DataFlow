@@ -41,7 +41,7 @@ const DataProcessingForm: React.FC<DataProcessingFormProps> = ({ uploadedFile })
       const uploadForm = new FormData();
       uploadForm.append('file', uploadedFile);
   
-      const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-tswh.onrender.com/api'}/upload`, {
+      const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-1.onrender.com/api'}/upload`, {
         method: 'POST',
         body: uploadForm,
       });
@@ -58,7 +58,7 @@ const DataProcessingForm: React.FC<DataProcessingFormProps> = ({ uploadedFile })
       processForm.append('description', description);
       processForm.append('require_dashboard', requireDashboard.toString());
   
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-tswh.onrender.com/api'}/process-data`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-1.onrender.com/api'}/process-data`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`, // ✅ Firebase token for authentication

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Download, ArrowLeft, ArrowRight, FileSpreadsheet, Eye, Home, BarChart3, Table, Database, Bot } from "lucide-react";
 import { useTheme } from '../App';
+import { API_BASE_URL } from '../api/config';
 import { getCurrentUserToken } from '../firebase/auth';
 
 function useQuery() {
@@ -45,7 +46,7 @@ const Preview: React.FC = () => {
       formData.append('description', 'Reprocessed from preview');
       formData.append('require_dashboard', 'true');
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/process-data`, {
+      const res = await fetch(`${API_BASE_URL}/process-data`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -90,7 +91,7 @@ const Preview: React.FC = () => {
         }
 
         const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/get-processed-data/${encodeURIComponent(fileId)}`,
+          `${API_BASE_URL}/get-processed-data/${encodeURIComponent(fileId)}`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -149,7 +150,7 @@ const Preview: React.FC = () => {
       }
 
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/download-processed-file/${encodeURIComponent(fileId)}`,
+        `${API_BASE_URL}/download-processed-file/${encodeURIComponent(fileId)}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

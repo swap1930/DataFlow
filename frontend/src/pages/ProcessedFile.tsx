@@ -7,7 +7,7 @@ const ProcessedFile: React.FC = () => {
   useEffect(() => {
     const fetchProcessedFile = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-tswh.onrender.com/api'}/view-processed-file`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'hhttps://dataflow-1.onrender.com/api'}/view-processed-file`);
         if (response.ok) {
           const result = await response.json();
           setData(result.data);
@@ -26,7 +26,7 @@ const ProcessedFile: React.FC = () => {
   }, []);
 
   const handleDownload = () => {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-tswh.onrender.com/api'}/process-data`;
+    window.location.href = `${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-1.onrender.com/api'}/process-data`;
   };
 
   return (

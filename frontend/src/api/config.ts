@@ -7,7 +7,7 @@ const inferApiBaseUrl = (): string => {
     const host = window.location.hostname;
     // Netlify or custom domain → use Render by default
     if (host.includes('netlify.app') || host.includes('dataflow')) {
-      return 'https://dataflow-tswh.onrender.com/api';
+      return 'https://dataflow-1.onrender.com/api';
     }
   }
   // Fallback to local dev
