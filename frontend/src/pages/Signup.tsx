@@ -70,7 +70,6 @@ const Signup: React.FC<SignupProps> = ({ onSignup }) => {
         console.log("Signup successful:", result.user);
         // Sign out the user and redirect to login
         await signOutUser();
-        alert("Account created successfully! Please login with your credentials.");
         navigate("/login");
       } else {
         setError(result.error);

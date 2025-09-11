@@ -36,7 +36,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (result.success) {
         // Save user data in localStorage
         localStorage.setItem("user", JSON.stringify(result.user));
-        alert("Login successful!");
         navigate("/dashboard"); // Redirect to dashboard
       } else {
         setError(result.error);

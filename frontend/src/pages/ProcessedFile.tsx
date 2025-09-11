@@ -1,22 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
+
+type ProcessedRow = {
+  [key: string]: string | number | boolean | null;
+};
 
 const ProcessedFile: React.FC = () => {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ProcessedRow[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchProcessedFile = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'hhttps://dataflow-1.onrender.com/api'}/view-processed-file`);
+        const response = await fetch(
+          `${
+            import.meta.env.VITE_API_BASE_URL ||
+            "https://dataflow-1.onrender.com/api"
+          }/view-processed-file`
+        );
+
         if (response.ok) {
           const result = await response.json();
           setData(result.data);
         } else {
-          alert('Failed to fetch processed file.');
+          alert("Failed to fetch processed file.");
         }
       } catch (error) {
-        console.error('Error fetching processed file:', error);
-        alert('Error fetching processed file.');
+        console.error("Error fetching processed file:", error);
+        alert("Error fetching processed file.");
       } finally {
         setIsLoading(false);
       }
@@ -26,7 +36,9 @@ const ProcessedFile: React.FC = () => {
   }, []);
 
   const handleDownload = () => {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-1.onrender.com/api'}/process-data`;
+    window.location.href = `${
+      import.meta.env.VITE_API_BASE_URL || "https://dataflow-1.onrender.com/api"
+    }/process-data`;
   };
 
   return (
@@ -41,7 +53,10 @@ const ProcessedFile: React.FC = () => {
               <tr>
                 {data.length > 0 &&
                   Object.keys(data[0]).map((key) => (
-                    <th key={key} className="border border-gray-300 px-4 py-2 text-left">
+                    <th
+                      key={key}
+                      className="border border-gray-300 px-4 py-2 text-left"
+                    >
                       {key}
                     </th>
                   ))}
@@ -52,7 +67,7 @@ const ProcessedFile: React.FC = () => {
                 <tr key={index}>
                   {Object.values(row).map((value, idx) => (
                     <td key={idx} className="border border-gray-300 px-4 py-2">
-                      {value}
+                      {value !== null ? value.toString() : ""}
                     </td>
                   ))}
                 </tr>

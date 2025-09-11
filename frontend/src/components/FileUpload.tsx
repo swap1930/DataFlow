@@ -53,7 +53,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
 
           if (response.ok) {
             const data = await response.json();
-            alert('File uploaded successfully!');
             onFileUpload(file); // Pass file to parent component
           } else {
             alert('Failed to upload file.');

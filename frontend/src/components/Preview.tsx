@@ -170,7 +170,7 @@ const Preview: React.FC = () => {
       window.URL.revokeObjectURL(url);
       
       // Show success message
-      alert('✅ File downloaded successfully!');
+     
     } catch (err: any) {
       alert('❌ ' + (err.message || "Download failed"));
     } finally {
