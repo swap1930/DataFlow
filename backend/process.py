@@ -189,11 +189,16 @@ def process_excel_file(upload_dir, remove_fields="", number_of_relations=3,
                 fig = px.imshow(pivot.values, labels=dict(x=pivot.columns.name, y=pivot.index.name, color="Count"),
                                 x=pivot.columns, y=pivot.index, title=title + " Heatmap")
 
-            with NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
-                pio.write_image(fig, tmpfile.name, width=600, height=400)
-                img = XLImage(tmpfile.name)
-            img.anchor = f"{chr(64 + col_num)}{row_num}"
-            ws_dash.add_image(img)
+            try:
+                with NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+                    # Kaleido needs Chrome/Chromium; if unavailable, this will raise
+                    pio.write_image(fig, tmpfile.name, width=600, height=400)
+                    img = XLImage(tmpfile.name)
+                img.anchor = f"{chr(64 + col_num)}{row_num}"
+                ws_dash.add_image(img)
+            except Exception:
+                # If image export fails (e.g., Chrome not installed), continue without embedding
+                pass
 
     # Save file to temporary location (in memory)
     from io import BytesIO
