@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pandas
+openpyxl
+python-multipart
+matplotlib
+seaborn
+plotly
+firebase-admin
+pymongo
+cohere
+kaleido
+pillow

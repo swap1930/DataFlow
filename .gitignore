@@ -1,0 +1,27 @@
+# Node & Python envs
+frontend/node_modules/
+backend/venv/
+
+# Python bytecode
+**/__pycache__/
+*.py[cod]
+
+# Local data/temp
+backend/uploads/
+backend/processed/
+backend/processed_files/
+
+# Env files
+.env
+frontend/.env
+backend/.env
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+frontend/dist/
+*.log
+

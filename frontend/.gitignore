@@ -30,6 +30,7 @@ dist-ssr
 # Python virtual environment
 venv/
 backend/venv/
+node_modules/
 
 # Python cache / build
 __pycache__/
