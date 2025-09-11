@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, auth
+import base64
 import requests
 from pydantic import BaseModel
 from chat import answer_question
@@ -28,13 +29,36 @@ try:
 except ValueError:
     try:
         # Initialize if not already initialized
-        cred = credentials.Certificate("firebase-service-account.json")
-        firebase_admin.initialize_app(cred)
-        firebase_initialized = True
-        print("✅ Firebase Admin SDK initialized successfully")
+        cred: credentials.Certificate | None = None
+
+        # 1) Prefer JSON string from env
+        firebase_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+        # 2) Or Base64-encoded JSON from env
+        firebase_b64 = os.getenv("FIREBASE_CREDENTIALS_B64")
+        # 3) Or file on disk
+        firebase_file = os.getenv("FIREBASE_CREDENTIALS_FILE", "firebase-service-account.json")
+
+        if firebase_json:
+            import json as _json
+            data = _json.loads(firebase_json)
+            cred = credentials.Certificate(data)
+        elif firebase_b64:
+            import json as _json
+            decoded = base64.b64decode(firebase_b64)
+            data = _json.loads(decoded)
+            cred = credentials.Certificate(data)
+        elif os.path.exists(firebase_file):
+            cred = credentials.Certificate(firebase_file)
+
+        if cred is not None:
+            firebase_admin.initialize_app(cred)
+            firebase_initialized = True
+            print("✅ Firebase Admin SDK initialized successfully")
+        else:
+            raise RuntimeError("No Firebase credentials provided")
     except Exception as e:
         print(f"⚠️ Firebase Admin SDK not initialized: {e}")
-        print("⚠️ Authentication will be disabled. Please set up firebase-service-account.json")
+        print("⚠️ Authentication will be disabled. Provide FIREBASE_CREDENTIALS_JSON or FIREBASE_CREDENTIALS_B64")
         firebase_initialized = False
 
 app = FastAPI(title="DataFlow Analytics API", version="1.0.0")
@@ -425,5 +449,6 @@ async def chat_endpoint(req: ChatRequest, decoded_token: dict = Depends(verify_f
 # ---------------- Run Uvicorn ----------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
