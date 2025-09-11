@@ -46,7 +46,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
         formData.append('file', file);
 
         try {
-          const response = await fetch('http://localhost:8000/api/upload', {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-tswh.onrender.com/api'}/upload`, {
             method: 'POST',
             body: formData,
           });
