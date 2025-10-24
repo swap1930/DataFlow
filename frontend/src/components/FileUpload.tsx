@@ -49,10 +49,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
 
         try {
           const token = await getCurrentUserToken();
+          console.log('🔑 Upload token check:', token ? 'Token exists' : 'No token');
+          
           if (!token) {
+            console.error('❌ No authentication token available');
             alert('User not authenticated. Please login again.');
             return;
           }
+
+          console.log('📤 Uploading file to:', `${API_BASE_URL}/upload`);
+          console.log('🔑 Using token:', token.substring(0, 20) + '...');
 
           const response = await fetch(`${API_BASE_URL}/upload`, {
             method: 'POST',
@@ -62,15 +68,20 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
             body: formData,
           });
 
+          console.log('📡 Upload response status:', response.status);
+
           if (response.ok) {
-            await response.json(); // Just consume the response
+            const result = await response.json();
+            console.log('✅ Upload successful:', result);
             onFileUpload(file); // Pass file to parent component
           } else {
-            alert('Failed to upload file.');
+            const errorText = await response.text();
+            console.error('❌ Upload failed:', response.status, errorText);
+            alert(`Failed to upload file: ${response.status} - ${errorText}`);
           }
         } catch (error) {
-          console.error('Error uploading file:', error);
-          alert('Error uploading file.');
+          console.error('❌ Error uploading file:', error);
+          alert(`Error uploading file: ${error}`);
         }
       }
     }

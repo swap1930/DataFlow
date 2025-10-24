@@ -174,9 +174,17 @@ async def root():
 # ---------------- File Upload ----------------
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...), decoded_token: dict = Depends(verify_firebase_token)):
+    print(f"📤 File upload request received")
+    print(f"📁 Filename: {file.filename}")
+    print(f"👤 User: {decoded_token.get('uid', 'unknown')}")
+    
     valid_extensions = ['.xlsx', '.xls', '.csv']
     file_extension = os.path.splitext(file.filename)[1].lower()
+    
+    print(f"🔍 File extension: {file_extension}")
+    
     if file_extension not in valid_extensions:
+        print(f"❌ Invalid file extension: {file_extension}")
         raise HTTPException(status_code=400, detail="Invalid file format. Please upload Excel or CSV.")
 
     # Clear previous uploads
@@ -189,6 +197,7 @@ async def upload_file(file: UploadFile = File(...), decoded_token: dict = Depend
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
+    print(f"✅ File uploaded successfully: {file_path}")
     return {"message": "File uploaded successfully", "file_path": file_path}
 
 # ---------------- Data Processing ----------------
