@@ -68,14 +68,14 @@ except ValueError:
 
 app = FastAPI(title="DataFlow Analytics API", version="1.0.0")
 
-# CORS
+# CORS - Enhanced for deployment
 allowed = [origin.strip() for origin in FRONTEND_ORIGINS.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed,
-    allow_origin_regex=r"^https:\/\/([a-z0-9-]+\.)*netlify\.app$",
+    allow_origin_regex=r"^https:\/\/([a-z0-9-]+\.)*(netlify\.app|vercel\.app|onrender\.com|herokuapp\.com)$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"]
 )
 
