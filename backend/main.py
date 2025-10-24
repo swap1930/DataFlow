@@ -16,6 +16,11 @@ from process import process_excel_file
 from config import FRONTEND_ORIGINS
 from db import insert_processed_file  # MongoDB integration
 
+# ML Integration imports
+from ml.insights_generator import InsightsGenerator
+from ml.predictive_analytics import PredictiveAnalytics
+from ml.smart_recommendations import SmartRecommendations
+
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -138,7 +143,7 @@ async def root():
 
 # ---------------- File Upload ----------------
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), decoded_token: dict = Depends(verify_firebase_token)):
     valid_extensions = ['.xlsx', '.xls', '.csv']
     file_extension = os.path.splitext(file.filename)[1].lower()
     if file_extension not in valid_extensions:
@@ -448,6 +453,241 @@ async def chat_endpoint(req: ChatRequest, decoded_token: dict = Depends(verify_f
     
 
     
+# ---------------- AI/ML Endpoints ----------------
+
+# Initialize ML services
+insights_generator = InsightsGenerator()
+predictive_analytics = PredictiveAnalytics()
+smart_recommendations = SmartRecommendations()
+
+@app.get("/api/ai/insights/{file_id}")
+async def get_ai_insights(file_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    """
+    Get AI-powered insights for a processed file
+    """
+    try:
+        user_id = decoded_token.get('uid', 'anonymous')
+        
+        # Import here to avoid circular imports
+        from db import get_user_processed_files, get_processed_data_by_id
+        
+        # Verify file belongs to user
+        user_files = get_user_processed_files(user_id)
+        file_exists = any(file['file_id'] == file_id for file in user_files)
+        
+        if not file_exists:
+            raise HTTPException(status_code=404, detail="File not found or access denied")
+        
+        # Get processed data from MongoDB
+        processed_data = get_processed_data_by_id(file_id)
+        
+        if not processed_data or 'processed_data' not in processed_data:
+            raise HTTPException(status_code=404, detail="Processed data not found")
+        
+        # Extract cleaned data
+        cleaned_data = processed_data['processed_data'].get('cleaned_data', [])
+        
+        if not cleaned_data:
+            raise HTTPException(status_code=400, detail="No cleaned data available for analysis")
+        
+        # Convert to DataFrame
+        import pandas as pd
+        df = pd.DataFrame(cleaned_data)
+        
+        # Generate insights
+        insights = insights_generator.analyze_data(df)
+        
+        return JSONResponse(content={
+            "success": True,
+            "file_id": file_id,
+            "insights": insights,
+            "total_insights": len(insights),
+            "generated_at": datetime.now().isoformat()
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating AI insights: {e}")
+        return JSONResponse(status_code=500, content={"message": f"Failed to generate insights: {str(e)}"})
+
+@app.get("/api/ai/predictions/{file_id}")
+async def get_predictions(file_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    """
+    Get predictive analytics for a processed file
+    """
+    try:
+        user_id = decoded_token.get('uid', 'anonymous')
+        
+        # Import here to avoid circular imports
+        from db import get_user_processed_files, get_processed_data_by_id
+        
+        # Verify file belongs to user
+        user_files = get_user_processed_files(user_id)
+        file_exists = any(file['file_id'] == file_id for file in user_files)
+        
+        if not file_exists:
+            raise HTTPException(status_code=404, detail="File not found or access denied")
+        
+        # Get processed data from MongoDB
+        processed_data = get_processed_data_by_id(file_id)
+        
+        if not processed_data or 'processed_data' not in processed_data:
+            raise HTTPException(status_code=404, detail="Processed data not found")
+        
+        # Extract cleaned data
+        cleaned_data = processed_data['processed_data'].get('cleaned_data', [])
+        
+        if not cleaned_data:
+            raise HTTPException(status_code=400, detail="No cleaned data available for prediction")
+        
+        # Convert to DataFrame
+        import pandas as pd
+        df = pd.DataFrame(cleaned_data)
+        
+        # Generate predictions
+        sales_prediction = predictive_analytics.predict_sales(df)
+        trend_predictions = predictive_analytics.predict_trends(df)
+        anomaly_predictions = predictive_analytics.predict_anomalies(df)
+        
+        return JSONResponse(content={
+            "success": True,
+            "file_id": file_id,
+            "predictions": {
+                "sales_prediction": sales_prediction,
+                "trend_predictions": trend_predictions,
+                "anomaly_predictions": anomaly_predictions
+            },
+            "generated_at": datetime.now().isoformat()
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating predictions: {e}")
+        return JSONResponse(status_code=500, content={"message": f"Failed to generate predictions: {str(e)}"})
+
+@app.get("/api/ai/recommendations/{file_id}")
+async def get_smart_recommendations(file_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    """
+    Get smart recommendations for charts and analysis
+    """
+    try:
+        user_id = decoded_token.get('uid', 'anonymous')
+        
+        # Import here to avoid circular imports
+        from db import get_user_processed_files, get_processed_data_by_id
+        
+        # Verify file belongs to user
+        user_files = get_user_processed_files(user_id)
+        file_exists = any(file['file_id'] == file_id for file in user_files)
+        
+        if not file_exists:
+            raise HTTPException(status_code=404, detail="File not found or access denied")
+        
+        # Get processed data from MongoDB
+        processed_data = get_processed_data_by_id(file_id)
+        
+        if not processed_data or 'processed_data' not in processed_data:
+            raise HTTPException(status_code=404, detail="Processed data not found")
+        
+        # Extract cleaned data
+        cleaned_data = processed_data['processed_data'].get('cleaned_data', [])
+        
+        if not cleaned_data:
+            raise HTTPException(status_code=400, detail="No cleaned data available for recommendations")
+        
+        # Convert to DataFrame
+        import pandas as pd
+        df = pd.DataFrame(cleaned_data)
+        
+        # Generate recommendations
+        chart_recommendations = smart_recommendations.recommend_charts(df)
+        analysis_recommendations = smart_recommendations.recommend_analysis(df)
+        insight_recommendations = smart_recommendations.recommend_insights(df)
+        
+        return JSONResponse(content={
+            "success": True,
+            "file_id": file_id,
+            "recommendations": {
+                "charts": chart_recommendations,
+                "analysis": analysis_recommendations,
+                "insights": insight_recommendations
+            },
+            "generated_at": datetime.now().isoformat()
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating recommendations: {e}")
+        return JSONResponse(status_code=500, content={"message": f"Failed to generate recommendations: {str(e)}"})
+
+@app.get("/api/ai/summary/{file_id}")
+async def get_ai_summary(file_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    """
+    Get comprehensive AI summary for a file
+    """
+    try:
+        user_id = decoded_token.get('uid', 'anonymous')
+        
+        # Import here to avoid circular imports
+        from db import get_user_processed_files, get_processed_data_by_id
+        
+        # Verify file belongs to user
+        user_files = get_user_processed_files(user_id)
+        file_exists = any(file['file_id'] == file_id for file in user_files)
+        
+        if not file_exists:
+            raise HTTPException(status_code=404, detail="File not found or access denied")
+        
+        # Get processed data from MongoDB
+        processed_data = get_processed_data_by_id(file_id)
+        
+        if not processed_data or 'processed_data' not in processed_data:
+            raise HTTPException(status_code=404, detail="Processed data not found")
+        
+        # Extract cleaned data
+        cleaned_data = processed_data['processed_data'].get('cleaned_data', [])
+        
+        if not cleaned_data:
+            raise HTTPException(status_code=400, detail="No cleaned data available for analysis")
+        
+        # Convert to DataFrame
+        import pandas as pd
+        df = pd.DataFrame(cleaned_data)
+        
+        # Generate comprehensive summary
+        insights = insights_generator.analyze_data(df)
+        chart_recommendations = smart_recommendations.recommend_charts(df)
+        analysis_recommendations = smart_recommendations.recommend_analysis(df)
+        
+        # Create summary
+        summary = {
+            "file_info": {
+                "file_id": file_id,
+                "rows": len(df),
+                "columns": len(df.columns),
+                "data_types": df.dtypes.to_dict()
+            },
+            "key_insights": insights[:5],  # Top 5 insights
+            "recommended_charts": chart_recommendations[:3],  # Top 3 charts
+            "recommended_analysis": analysis_recommendations[:3],  # Top 3 analyses
+            "data_quality_score": min(100, max(0, 100 - (df.isnull().sum().sum() / df.size * 100))),
+            "generated_at": datetime.now().isoformat()
+        }
+        
+        return JSONResponse(content={
+            "success": True,
+            "summary": summary
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating AI summary: {e}")
+        return JSONResponse(status_code=500, content={"message": f"Failed to generate summary: {str(e)}"})
+
 # ---------------- Run Uvicorn ----------------
 if __name__ == "__main__":
     import uvicorn

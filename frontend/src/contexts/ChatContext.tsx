@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../api/config';
+import { getCurrentUserToken } from '../firebase/auth';
 
 type ChatItem = {
   id: string;
@@ -31,20 +32,44 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
+      const token = await getCurrentUserToken();
+      if (!token) {
+        console.log('No authentication token found, skipping chat fetch');
+        setAllChats([]);
+        setRecentChats([]);
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
       const [allRes, recentRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/user-files`, { credentials: 'include' }),
-        fetch(`${API_BASE_URL}/user-recent-files`, { credentials: 'include' })
+        fetch(`${API_BASE_URL}/user-files`, { 
+          method: 'GET',
+          headers: headers
+        }),
+        fetch(`${API_BASE_URL}/user-recent-files`, { 
+          method: 'GET',
+          headers: headers
+        })
       ]);
+      
       if (!allRes.ok || !recentRes.ok) {
         throw new Error('Failed to load chats');
       }
+      
       const allData = await allRes.json();
       const recentData = await recentRes.json();
       setAllChats(Array.isArray(allData?.files) ? allData.files : allData);
-      setRecentChats(Array.isArray(recentData?.files) ? recentData.files : recentData);
+      setRecentChats(Array.isArray(recentData?.recent_files) ? recentData.recent_files : recentData);
     } catch (e: any) {
       console.error('ChatContext fetch error:', e);
       setError(e?.message || 'Failed to load chats');
+      // Set empty arrays on error to prevent UI issues
+      setAllChats([]);
+      setRecentChats([]);
     } finally {
       setLoading(false);
     }

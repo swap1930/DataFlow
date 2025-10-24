@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { Upload, X, CheckCircle } from 'lucide-react';
 import { useTheme } from '../App';
+import { getCurrentUserToken } from '../firebase/auth';
+import { API_BASE_URL } from '../api/config';
 
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
@@ -46,13 +48,22 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
         formData.append('file', file);
 
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://dataflow-1.onrender.com/api'}/upload`, {
+          const token = await getCurrentUserToken();
+          if (!token) {
+            alert('User not authenticated. Please login again.');
+            return;
+          }
+
+          const response = await fetch(`${API_BASE_URL}/upload`, {
             method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
             body: formData,
           });
 
           if (response.ok) {
-            const data = await response.json();
+            await response.json(); // Just consume the response
             onFileUpload(file); // Pass file to parent component
           } else {
             alert('Failed to upload file.');

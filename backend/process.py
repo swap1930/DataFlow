@@ -10,6 +10,12 @@ import plotly.io as pio
 from tempfile import NamedTemporaryFile
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import IsolationForest
+import warnings
+warnings.filterwarnings('ignore')
 
 # Initialize Plotly Kaleido scope explicitly for reliable image export (e.g., on Render)
 try:
@@ -28,6 +34,221 @@ try:
         ]
 except Exception as _kaleido_init_err:
     print(f"⚠️ Kaleido initialization failed: {_kaleido_init_err}")
+
+class MLPivotGenerator:
+    """
+    ML-powered pivot table generator that analyzes data characteristics
+    and generates accurate pivot tables based on requirements
+    """
+    
+    def __init__(self):
+        self.scaler = StandardScaler()
+        self.imputer = SimpleImputer(strategy='mean')
+        self.anomaly_detector = IsolationForest(contamination=0.1, random_state=42)
+    
+    def analyze_data_characteristics(self, df):
+        """Analyze data characteristics for intelligent pivot generation"""
+        characteristics = {
+            'total_rows': len(df),
+            'total_columns': len(df.columns),
+            'numeric_columns': df.select_dtypes(include=[np.number]).columns.tolist(),
+            'categorical_columns': df.select_dtypes(include=['object', 'category']).columns.tolist(),
+            'datetime_columns': [],
+            'missing_data_percentage': (df.isnull().sum().sum() / df.size) * 100,
+            'duplicate_rows': df.duplicated().sum(),
+            'data_types': df.dtypes.to_dict()
+        }
+        
+        # Identify datetime columns
+        for col in df.columns:
+            if df[col].dtype == 'datetime64[ns]' or 'date' in col.lower() or 'time' in col.lower():
+                characteristics['datetime_columns'].append(col)
+        
+        return characteristics
+    
+    def handle_missing_data(self, df, strategy='intelligent'):
+        """Handle missing data using ML-based strategies"""
+        df_cleaned = df.copy()
+        
+        for col in df_cleaned.columns:
+            if df_cleaned[col].isnull().any():
+                if df_cleaned[col].dtype in ['object', 'category']:
+                    # For categorical: use mode
+                    mode_value = df_cleaned[col].mode()
+                    if len(mode_value) > 0:
+                        df_cleaned[col].fillna(mode_value[0], inplace=True)
+                    else:
+                        df_cleaned[col].fillna('Unknown', inplace=True)
+                else:
+                    # For numeric: use mean, median, or max based on distribution
+                    if strategy == 'intelligent':
+                        # Analyze distribution to choose best imputation
+                        non_null_data = df_cleaned[col].dropna()
+                        if len(non_null_data) > 0:
+                            skewness = non_null_data.skew()
+                            if abs(skewness) > 1:  # Highly skewed
+                                df_cleaned[col].fillna(non_null_data.median(), inplace=True)
+                            else:  # Normal distribution
+                                df_cleaned[col].fillna(non_null_data.mean(), inplace=True)
+                    else:
+                        df_cleaned[col].fillna(df_cleaned[col].mean(), inplace=True)
+        
+        return df_cleaned
+    
+    def find_best_relations(self, df, required_relations):
+        """Find best column combinations for pivot tables using ML analysis"""
+        characteristics = self.analyze_data_characteristics(df)
+        categorical_cols = characteristics['categorical_columns']
+        numeric_cols = characteristics['numeric_columns']
+        
+        if len(categorical_cols) < 2:
+            return []
+        
+        # Score each combination based on data quality and relationship strength
+        combinations = list(itertools.combinations(categorical_cols, 2))
+        scored_combinations = []
+        
+        for col1, col2 in combinations:
+            score = self._calculate_relation_score(df, col1, col2)
+            scored_combinations.append((col1, col2, score))
+        
+        # Sort by score and return top combinations
+        scored_combinations.sort(key=lambda x: x[2], reverse=True)
+        return scored_combinations[:required_relations]
+    
+    def _calculate_relation_score(self, df, col1, col2):
+        """Calculate relationship strength score between two columns"""
+        try:
+            # Check for missing data
+            missing_pct = (df[col1].isnull().sum() + df[col2].isnull().sum()) / (len(df) * 2)
+            
+            # Check for unique values (avoid too many categories)
+            unique_ratio1 = df[col1].nunique() / len(df)
+            unique_ratio2 = df[col2].nunique() / len(df)
+            
+            # Check for balanced distribution
+            value_counts1 = df[col1].value_counts()
+            value_counts2 = df[col2].value_counts()
+            
+            # Calculate entropy (higher entropy = more balanced)
+            entropy1 = -sum((count/len(df)) * np.log2(count/len(df)) for count in value_counts1 if count > 0)
+            entropy2 = -sum((count/len(df)) * np.log2(count/len(df)) for count in value_counts2 if count > 0)
+            
+            # Calculate cross-tabulation strength
+            crosstab = pd.crosstab(df[col1], df[col2])
+            chi2_score = self._calculate_chi2_score(crosstab)
+            
+            # Composite score
+            score = (
+                (1 - missing_pct) * 0.3 +  # Lower missing data = higher score
+                (entropy1 + entropy2) / 2 * 0.2 +  # Balanced distribution
+                min(unique_ratio1, unique_ratio2) * 0.2 +  # Reasonable number of categories
+                chi2_score * 0.3  # Statistical relationship strength
+            )
+            
+            return score
+            
+        except Exception as e:
+            return 0.0
+    
+    def _calculate_chi2_score(self, crosstab):
+        """Calculate chi-square statistic for relationship strength"""
+        try:
+            from scipy.stats import chi2_contingency
+            # Check if crosstab has sufficient data
+            if crosstab.shape[0] < 2 or crosstab.shape[1] < 2:
+                return 0.0
+            
+            chi2, p_value, dof, expected = chi2_contingency(crosstab)
+            # Normalize chi-square value
+            normalized_chi2 = min(chi2 / (crosstab.shape[0] * crosstab.shape[1]), 1.0)
+            return normalized_chi2
+        except Exception as e:
+            print(f"Chi-square calculation failed: {e}")
+            return 0.0
+    
+    def generate_ml_pivot_tables(self, df, required_relations):
+        """Generate ML-optimized pivot tables"""
+        try:
+            # Handle missing data first
+            df_processed = self.handle_missing_data(df)
+            
+            # Find best relations
+            best_relations = self.find_best_relations(df_processed, required_relations)
+            
+            pivot_tables = []
+            pivot_data_for_frontend = []
+            
+            for col1, col2, score in best_relations:
+                try:
+                    # Generate pivot table with ML-optimized aggregation
+                    pivot = pd.pivot_table(
+                        df_processed, 
+                        index=col1, 
+                        columns=col2, 
+                        aggfunc='size', 
+                        fill_value=0
+                    )
+                    
+                    # Add statistical insights
+                    total_combinations = pivot.sum().sum()
+                    max_combination = pivot.max().max()
+                    avg_combination = pivot.mean().mean()
+                    
+                    pivot_tables.append({
+                        'title': f"{col1} vs {col2}",
+                        'pivot': pivot,
+                        'score': score,
+                        'insights': {
+                            'total_combinations': int(total_combinations),
+                            'max_combination': int(max_combination),
+                            'avg_combination': round(avg_combination, 2),
+                            'data_quality_score': round(score, 3)
+                        }
+                    })
+                    
+                    # Create structured data for frontend
+                    pivot_frontend = {
+                        "title": f"{col1} vs {col2}",
+                        "index_column": col1,
+                        "column_headers": [str(col) for col in pivot.columns],
+                        "data": [],
+                        "ml_insights": {
+                            'relationship_strength': round(score, 3),
+                            'data_quality': 'High' if score > 0.7 else 'Medium' if score > 0.4 else 'Low',
+                            'recommended_analysis': self._get_analysis_recommendation(score, pivot)
+                        }
+                    }
+                    
+                    # Convert pivot table to structured format
+                    for idx, row in pivot.iterrows():
+                        row_data = {"index": str(idx)}
+                        for col in pivot.columns:
+                            row_data[str(col)] = int(row[col])
+                        pivot_frontend["data"].append(row_data)
+                    
+                    pivot_data_for_frontend.append(pivot_frontend)
+                    
+                except Exception as e:
+                    print(f"Error generating pivot for {col1} vs {col2}: {e}")
+                    continue
+            
+            return pivot_tables, pivot_data_for_frontend
+            
+        except Exception as e:
+            print(f"ML pivot generation failed: {e}")
+            return [], []
+    
+    def _get_analysis_recommendation(self, score, pivot):
+        """Get ML-based analysis recommendations"""
+        if score > 0.8:
+            return "Strong relationship detected - ideal for detailed analysis"
+        elif score > 0.6:
+            return "Moderate relationship - good for trend analysis"
+        elif score > 0.4:
+            return "Weak relationship - consider data preprocessing"
+        else:
+            return "Very weak relationship - may need data cleaning"
 
 def process_excel_file(upload_dir, remove_fields="", number_of_relations=3,
                               description="", require_dashboard=True,
@@ -70,61 +291,49 @@ def process_excel_file(upload_dir, remove_fields="", number_of_relations=3,
         remove_list = [r.strip() for r in remove_fields.split(",")]
         df = df.drop(columns=remove_list, errors='ignore')
 
-    # Identify categorical columns
-    cat_fields = df.select_dtypes(include='object').nunique().sort_values(ascending=False).index.tolist()
-
-    # Generate pivot tables
-    pivot_tables = []
-    pivot_data_for_frontend = []  # New: structured data for frontend
+    # Initialize ML Pivot Generator
+    ml_pivot_generator = MLPivotGenerator()
     
-    if len(cat_fields) >= 2:
-        combos = list(itertools.combinations(cat_fields, 2))[:number_of_relations]
-        for col1, col2 in combos:
-            pivot = pd.pivot_table(df, index=col1, columns=col2, aggfunc='size', fill_value=0)
-            pivot_tables.append((f"{col1} vs {col2}", pivot))
-            
-            # Create structured data for frontend
-            pivot_frontend = {
-                "title": f"{col1} vs {col2}",
-                "index_column": col1,
-                "column_headers": [str(col) for col in pivot.columns],
-                "data": []
-            }
-            
-            # Convert pivot table to structured format
-            for idx, row in pivot.iterrows():
-                row_data = {"index": str(idx)}
-                for col in pivot.columns:
-                    row_data[str(col)] = int(row[col])
-                pivot_frontend["data"].append(row_data)
-            
-            pivot_data_for_frontend.append(pivot_frontend)
-            
-    elif len(cat_fields) == 1:
-        col = cat_fields[0]
-        pivot = df[col].value_counts().to_frame(name='Count')
-        pivot_tables.append((f"{col} Frequency", pivot))
+    # Generate ML-powered pivot tables
+    ml_pivot_tables, pivot_data_for_frontend = ml_pivot_generator.generate_ml_pivot_tables(
+        df, number_of_relations
+    )
+    
+    # Convert ML pivot tables to legacy format for compatibility
+    pivot_tables = []
+    for ml_pivot in ml_pivot_tables:
+        pivot_tables.append((ml_pivot['title'], ml_pivot['pivot']))
+    
+    # Fallback to traditional method if ML method fails
+    if not pivot_tables:
+        # Identify categorical columns
+        cat_fields = df.select_dtypes(include='object').nunique().sort_values(ascending=False).index.tolist()
         
-        # Create structured data for frontend
-        pivot_frontend = {
-            "title": f"{col} Frequency",
-            "index_column": col,
-            "column_headers": ["Count"],
-            "data": []
-        }
-        
-        for idx, count in pivot.iterrows():
-            pivot_frontend["data"].append({
-                "index": str(idx),
-                "Count": int(count['Count'])
-            })
-        
-        pivot_data_for_frontend.append(pivot_frontend)
-        
-    else:
-        numeric_cols = df.select_dtypes(include='number').columns.tolist()
-        if numeric_cols:
-            col = numeric_cols[0]
+        if len(cat_fields) >= 2:
+            combos = list(itertools.combinations(cat_fields, 2))[:number_of_relations]
+            for col1, col2 in combos:
+                pivot = pd.pivot_table(df, index=col1, columns=col2, aggfunc='size', fill_value=0)
+                pivot_tables.append((f"{col1} vs {col2}", pivot))
+                
+                # Create structured data for frontend
+                pivot_frontend = {
+                    "title": f"{col1} vs {col2}",
+                    "index_column": col1,
+                    "column_headers": [str(col) for col in pivot.columns],
+                    "data": []
+                }
+                
+                # Convert pivot table to structured format
+                for idx, row in pivot.iterrows():
+                    row_data = {"index": str(idx)}
+                    for col in pivot.columns:
+                        row_data[str(col)] = int(row[col])
+                    pivot_frontend["data"].append(row_data)
+                
+                pivot_data_for_frontend.append(pivot_frontend)
+                
+        elif len(cat_fields) == 1:
+            col = cat_fields[0]
             pivot = df[col].value_counts().to_frame(name='Count')
             pivot_tables.append((f"{col} Frequency", pivot))
             
@@ -143,8 +352,31 @@ def process_excel_file(upload_dir, remove_fields="", number_of_relations=3,
                 })
             
             pivot_data_for_frontend.append(pivot_frontend)
+            
         else:
-            raise ValueError("No usable columns to generate relationships.")
+            numeric_cols = df.select_dtypes(include='number').columns.tolist()
+            if numeric_cols:
+                col = numeric_cols[0]
+                pivot = df[col].value_counts().to_frame(name='Count')
+                pivot_tables.append((f"{col} Frequency", pivot))
+                
+                # Create structured data for frontend
+                pivot_frontend = {
+                    "title": f"{col} Frequency",
+                    "index_column": col,
+                    "column_headers": ["Count"],
+                    "data": []
+                }
+                
+                for idx, count in pivot.iterrows():
+                    pivot_frontend["data"].append({
+                        "index": str(idx),
+                        "Count": int(count['Count'])
+                    })
+                
+                pivot_data_for_frontend.append(pivot_frontend)
+            else:
+                raise ValueError("No usable columns to generate relationships.")
 
     # Create workbook
     wb = Workbook()

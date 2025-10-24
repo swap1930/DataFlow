@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Download, ArrowLeft, ArrowRight, FileSpreadsheet, Eye, Home, BarChart3, Table, Database, Bot } from "lucide-react";
+import { Download, ArrowLeft, ArrowRight, FileSpreadsheet, Eye, Home, BarChart3, Table, Database, Bot, Brain } from "lucide-react";
 import { useTheme } from '../App';
 import { API_BASE_URL } from '../api/config';
 import { getCurrentUserToken } from '../firebase/auth';
+import AIIntelligence from './AIIntelligence';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -17,10 +18,9 @@ const Preview: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
   const [pivotTables, setPivotTables] = useState<any[]>([]);
   const [hasDashboard, setHasDashboard] = useState(false);
-  const [sheets, setSheets] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'cleaned' | 'pivot' | 'dashboard'>('cleaned');
+  const [activeTab, setActiveTab] = useState<'cleaned' | 'pivot' | 'dashboard' | 'ai'>('cleaned');
 
   // Pagination
   const [page, setPage] = useState(0);
@@ -123,7 +123,7 @@ const Preview: React.FC = () => {
         (window as any).__pivot_relations_info = { reqR, genR };
         
         setHasDashboard(processedData.has_dashboard || false);
-        setSheets(processedData.sheets || []);
+        // setSheets(processedData.sheets || []);
         
         console.log("Processed data from MongoDB:", processedData);
       } catch (err: any) {
@@ -364,6 +364,24 @@ const Preview: React.FC = () => {
                   </div>
                 </button>
               )}
+              
+              <button
+                onClick={() => setActiveTab('ai')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 flex-1 ${
+                  activeTab === 'ai'
+                    ? isDarkMode
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-blue-500 text-blue-600'
+                    : isDarkMode
+                      ? 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <Brain className="w-6 h-6 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">AI Intelligence</span>
+                </div>
+              </button>
             </nav>
           </div>
         </div>
@@ -518,6 +536,11 @@ const Preview: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* AI Intelligence Tab */}
+        {activeTab === 'ai' && (
+          <AIIntelligence fileId={fileId} />
         )}
 
         {/* Pagination - Only show for cleaned data */}

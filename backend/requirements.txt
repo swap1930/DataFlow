@@ -11,3 +11,7 @@ pymongo
 cohere
 kaleido
 pillow
+# ML Dependencies
+scikit-learn
+numpy
+scipy
