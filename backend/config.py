@@ -13,7 +13,9 @@ FRONTEND_ORIGINS = (
 # Add common deployment URLs
 DEPLOYMENT_URLS = [
     "https://excelprocess.netlify.app",
-    
+    "https://dataflow-1.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000"
 ]
 
 # Combine with environment URLs

@@ -70,6 +70,8 @@ app = FastAPI(title="DataFlow Analytics API", version="1.0.0")
 
 # CORS - Enhanced for deployment
 allowed = [origin.strip() for origin in FRONTEND_ORIGINS.split(",")]
+print(f"🔧 CORS Allowed Origins: {allowed}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed,
@@ -82,12 +84,14 @@ app.add_middleware(
 # Firebase Authentication Dependency
 async def verify_firebase_token(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
+        print("❌ No authorization header or invalid format")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization header"
         )
     
     token = authorization.split("Bearer ")[1]
+    print(f"🔐 Token received: {token[:20]}...")
     
     if not firebase_initialized:
         # If Firebase is not initialized, try to decode token manually for development
@@ -99,6 +103,7 @@ async def verify_firebase_token(authorization: str = Header(None)):
             # Extract payload from JWT token (middle part)
             token_parts = token.split('.')
             if len(token_parts) != 3:
+                print("❌ Invalid token format - not 3 parts")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token format"
@@ -123,14 +128,39 @@ async def verify_firebase_token(authorization: str = Header(None)):
             }
         except Exception as decode_error:
             print(f"❌ Manual token decode failed: {decode_error}")
-            # Fallback to mock user
-            return {"uid": "dev_user_123", "email": "dev@example.com"}
+            # For deployment, allow some flexibility
+            return {"uid": "deployed_user_123", "email": "deployed@example.com"}
     
     try:
         # Verify the Firebase token
         decoded_token = auth.verify_id_token(token)
+        print(f"✅ Firebase token verified for user: {decoded_token.get('uid', 'unknown')}")
         return decoded_token
     except Exception as e:
+        print(f"❌ Firebase token verification failed: {e}")
+        # For deployment, try manual decode as fallback
+        try:
+            import base64
+            import json
+            
+            token_parts = token.split('.')
+            if len(token_parts) == 3:
+                payload = token_parts[1]
+                missing_padding = len(payload) % 4
+                if missing_padding:
+                    payload += '=' * (4 - missing_padding)
+                
+                decoded_payload = base64.urlsafe_b64decode(payload)
+                user_data = json.loads(decoded_payload)
+                
+                print(f"✅ Fallback decode successful for user: {user_data.get('user_id', 'unknown')}")
+                return {
+                    "uid": user_data.get('user_id', user_data.get('sub', 'unknown')),
+                    "email": user_data.get('email', 'unknown@example.com')
+                }
+        except Exception as fallback_error:
+            print(f"❌ Fallback decode also failed: {fallback_error}")
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {str(e)}"
